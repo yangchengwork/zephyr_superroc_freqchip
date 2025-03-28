@@ -3,7 +3,7 @@
 
 description: FR30XX/C GPIO Controller
 
-compatible: "fr,fr30xx-gpio"
+compatible: "freqchip,fr30xx-gpio"
 
 include:
   - name: gpio-controller.yaml
@@ -16,7 +16,7 @@ properties:
     required: true
 
   clocks:
-    required: true
+    required: false
 
   "#gpio-cells":
     const: 2
