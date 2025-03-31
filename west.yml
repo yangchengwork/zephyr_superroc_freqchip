@@ -223,11 +223,11 @@ manifest:
       path: modules/hal/quicklogic
       groups:
         - hal
-    - name: hal_renesas
-      path: modules/hal/renesas
-      revision: cbaf9b554988614ce11805a9b2f03f6bb0310b8b
-      groups:
-        - hal
+    # - name: hal_renesas
+    #   path: modules/hal/renesas
+    #   revision: cbaf9b554988614ce11805a9b2f03f6bb0310b8b
+    #   groups:
+    #     - hal
     - name: hal_rpi_pico
       path: modules/hal/rpi_pico
       revision: 7b57b24588797e6e7bf18b6bda168e6b96374264
