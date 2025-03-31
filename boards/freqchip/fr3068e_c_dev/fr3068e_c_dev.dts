@@ -20,20 +20,29 @@
 		zephyr,code-partition = &slot0_partition; // 指向 application-A 节点
 	};
 
+	aliases {
+		led0 = &frled1;
+	};
+
 	/* 定义 GPIO 引脚 LED */
 	gpio_leds: gpio_leds {
 		compatible = "gpio-leds";
-		led0: led_d3 {
+		status = "okay";
+
+		frled0: led_d3 {
 			gpios = <&gpiod 6 GPIO_ACTIVE_HIGH>;
 			label = "LED0";
+			status = "okay";
 		};
-		led1: led_d4 {
+		frled1: led_d4 {
 			gpios = <&gpiod 7 GPIO_ACTIVE_HIGH>;
 			label = "LED1";
+			status = "okay";
 		};
-		led2: led_d5 {
+		frled2: led_d5 {
 			gpios = <&gpiod 15 GPIO_ACTIVE_HIGH>;
 			label = "LED2";
+			status = "disabled";
 		};
 	};
 };
