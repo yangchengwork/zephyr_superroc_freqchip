@@ -3,7 +3,7 @@
 
 description: FR30XX/C GPIO Controller
 
-compatible: "freqchip,fr30xx-gpio"
+compatible: "freqchip,freqchip-gpio"
 
 include:
   - name: gpio-controller.yaml
