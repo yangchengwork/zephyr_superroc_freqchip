@@ -12,6 +12,8 @@
 struct gpio_freqchip_config {
 	/* gpio_driver_config needs to be first */
 	struct gpio_driver_config common;
+	/* port base address */
+	uint32_t *base;
 };
 
 struct gpio_freqchip_data {
@@ -23,12 +25,22 @@ static int gpio_freqchip_pin_configure(const struct device *port,
 				  gpio_pin_t pin,
 				  gpio_flags_t flags)
 {
-	return -ENOTSUP;
+	const struct gpio_freqchip_config *cfg = port->config;
+	GPIO_TypeDef *gpio = (GPIO_TypeDef *)cfg->base;
+	printf("%s %s->%p:%d,%x\n", __func__, port->name, gpio, pin, flags);
+
+	// 这里需要判断这个IO是否可用，我现在默认都是可用的
+	if (true) {
+		return 0;
+	} else {
+		return -ENOTSUP;
+	}
 }
 
 static int gpio_freqchip_port_get_raw(const struct device *port,
 				 gpio_port_value_t *value)
 {
+	printf("%s\n", __func__);
 	return -ENOTSUP;
 }
 
@@ -71,7 +83,7 @@ static DEVICE_API(gpio, gpio_freqchip_api) = {
 };
 
 static int gpio_freqchip_init(const struct device *dev) {
-    printf("FreqChip GPIO Driver Initialized\n");
+    printf("FreqChip GPIO %s Initialized\n", dev->name);
     return 0;
 }
 
@@ -80,6 +92,7 @@ static int gpio_freqchip_init(const struct device *dev) {
 		.common = {						\
 			.port_pin_mask = GPIO_PORT_PIN_MASK_FROM_DT_INST(n), \
 		},							\
+		.base = (uint32_t *)DT_INST_REG_ADDR(n), \
 	};								\
 									\
 	static struct gpio_freqchip_data gpio_freqchip_data_##n;			\
