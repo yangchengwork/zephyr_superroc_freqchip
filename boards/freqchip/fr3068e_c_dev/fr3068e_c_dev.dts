@@ -21,7 +21,7 @@
 	};
 
 	aliases {
-		led0 = &frled1;
+		led0 = &frled0;
 	};
 
 	/* 定义 GPIO 引脚 LED */
@@ -35,12 +35,12 @@
 			status = "okay";
 		};
 		frled1: led_d4 {
-			gpios = <&gpiod 7 GPIO_ACTIVE_HIGH>;
+			gpios = <&gpiod 7 GPIO_ACTIVE_LOW>;
 			label = "LED1";
 			status = "okay";
 		};
 		frled2: led_d5 {
-			gpios = <&gpiod 15 GPIO_ACTIVE_HIGH>;
+			gpios = <&gpiod 15 GPIO_ACTIVE_LOW>;
 			label = "LED2";
 			status = "disabled";
 		};

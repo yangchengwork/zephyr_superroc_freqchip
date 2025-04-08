@@ -19,6 +19,8 @@ struct gpio_freqchip_config {
 struct gpio_freqchip_data {
 	/* gpio_driver_data needs to be first */
 	struct gpio_driver_data common;
+	/* output old value 1bit->1pin */
+	uint32_t old_output_value;
 };
 
 static int gpio_freqchip_pin_configure(const struct device *port,
@@ -27,14 +29,40 @@ static int gpio_freqchip_pin_configure(const struct device *port,
 {
 	const struct gpio_freqchip_config *cfg = port->config;
 	GPIO_TypeDef *gpio = (GPIO_TypeDef *)cfg->base;
-	printf("%s %s->%p:%d,%x\n", __func__, port->name, gpio, pin, flags);
+	struct gpio_freqchip_data *data = port->data;
+
+	printf("%s %s->%p:%d,%x,%x\n", __func__, port->name, gpio, pin, flags, data->old_output_value);
 
 	GPIO_InitTypeDef GPIO_Handle = {0};
 	GPIO_Handle.Pin = 1<<pin;
-	GPIO_Handle.Mode = GPIO_MODE_OUTPUT_PP;
-	GPIO_Handle.Pull = GPIO_PULLUP;
+	if (flags & GPIO_OUTPUT) {
+		GPIO_Handle.Mode = GPIO_MODE_OUTPUT_PP;
+		if (flags & GPIO_OUTPUT_INIT_LOW) {
+			GPIO_Handle.Pull = GPIO_PULLUP;
+		} else {
+			GPIO_Handle.Pull = GPIO_PULLDOWN;
+		}
+	} else if (flags & GPIO_INPUT) {
+		GPIO_Handle.Mode = GPIO_MODE_INPUT;
+		if (flags & GPIO_OUTPUT_INIT_HIGH) {
+			GPIO_Handle.Pull = GPIO_PULLUP;
+		} else {
+			GPIO_Handle.Pull = GPIO_PULLDOWN;
+		}
+	}
 	gpio_init(gpio, &GPIO_Handle);
 
+	if (flags & GPIO_OUTPUT) {
+		uint16_t pin_value = 1<<pin;
+		if (flags & GPIO_OUTPUT_INIT_LOW) {
+			data->old_output_value &= ~pin_value;
+			gpio_write_pin(gpio, pin_value, GPIO_PIN_CLEAR);
+		} else if (flags & GPIO_OUTPUT_INIT_HIGH) {
+			data->old_output_value |= pin_value;
+			gpio_write_pin(gpio, pin_value, GPIO_PIN_SET);
+		}
+		printf("%x,%x\n", pin_value, data->old_output_value);
+	}
 
 	// 这里需要判断这个IO是否可用，我现在默认都是可用的
 	if (true) {
@@ -99,18 +127,17 @@ static int gpio_freqchip_port_clear_bits_raw(const struct device *port,
 	}
 }
 
-static uint8_t gump_test = 0;
 static int gpio_freqchip_port_toggle_bits(const struct device *port,
 				     gpio_port_pins_t pins)
 {
-	printf("%s:%x\n", __func__, pins);
+	struct gpio_freqchip_data *data = port->data;
+	data->old_output_value ^= pins;
+	printf("%s:%x,%x\n", __func__, pins, data->old_output_value);
 	const struct gpio_freqchip_config *cfg = port->config;
 	GPIO_TypeDef *gpio = (GPIO_TypeDef *)cfg->base;
-	if (gump_test > 0) {
-		gump_test = 0;
+	if (data->old_output_value & pins) {
 		gpio_write_pin(gpio, pins, GPIO_PIN_SET);
 	} else {
-		gump_test = 1;
 		gpio_write_pin(gpio, pins, GPIO_PIN_CLEAR);
 	}
 	// 这里需要判断这个IO是否可用，我现在默认都是可用的
