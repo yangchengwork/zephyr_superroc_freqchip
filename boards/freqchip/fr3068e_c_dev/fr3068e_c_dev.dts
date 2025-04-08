@@ -22,6 +22,7 @@
 
 	aliases {
 		led0 = &frled0;
+		led1 = &frled1;
 	};
 
 	/* 定义 GPIO 引脚 LED */

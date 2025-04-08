@@ -100,10 +100,12 @@ static int gpio_freqchip_port_set_masked_raw(const struct device *port,
 static int gpio_freqchip_port_set_bits_raw(const struct device *port,
 				      gpio_port_pins_t pins)
 {
-	printf("%s:%x\n", __func__, pins);
+	struct gpio_freqchip_data *data = port->data;
+	data->old_output_value |= pins;
+	printf("%s:%x,%x\n", __func__, pins, data->old_output_value);
 	const struct gpio_freqchip_config *cfg = port->config;
 	GPIO_TypeDef *gpio = (GPIO_TypeDef *)cfg->base;
-	gpio_write_pin(gpio, 1<<pins, GPIO_PIN_SET);
+	gpio_write_pin(gpio, pins, GPIO_PIN_SET);
 	// 这里需要判断这个IO是否可用，我现在默认都是可用的
 	if (true) {
 		return 0;
@@ -115,7 +117,9 @@ static int gpio_freqchip_port_set_bits_raw(const struct device *port,
 static int gpio_freqchip_port_clear_bits_raw(const struct device *port,
 					gpio_port_pins_t pins)
 {
-	printf("%s:%x\n", __func__, pins);
+	struct gpio_freqchip_data *data = port->data;
+	data->old_output_value &= ~pins;
+	printf("%s:%x,%x\n", __func__, pins, data->old_output_value);
 	const struct gpio_freqchip_config *cfg = port->config;
 	GPIO_TypeDef *gpio = (GPIO_TypeDef *)cfg->base;
 	gpio_write_pin(gpio, pins, GPIO_PIN_CLEAR);
