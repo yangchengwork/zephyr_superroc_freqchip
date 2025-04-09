@@ -75,7 +75,12 @@ static int gpio_freqchip_pin_configure(const struct device *port,
 static int gpio_freqchip_port_get_raw(const struct device *port,
 				 gpio_port_value_t *value)
 {
-	printf("%s\n", __func__);
+	const struct gpio_freqchip_config *cfg = port->config;
+	GPIO_TypeDef *gpio = (GPIO_TypeDef *)cfg->base;
+	// *value = gpio_read_pin(gpio, 0);
+	*value = gpio_read_group(gpio);
+	printf("%s:%x\n", __func__, *value);
+
 	// 这里需要判断这个IO是否可用，我现在默认都是可用的
 	if (true) {
 		return 0;
@@ -152,6 +157,36 @@ static int gpio_freqchip_port_toggle_bits(const struct device *port,
 	}
 }
 
+#ifdef CONFIG_GPIO_FREQCHIP_INTERRUPT
+static int gpio_freqchip_pin_interrupt_configure(const struct device *port,
+	gpio_pin_t pin,
+	enum gpio_int_mode mode,
+	enum gpio_int_trig trig)
+{
+	printf("%s\n", __func__);
+	// 这里需要判断这个IO是否可用，我现在默认都是可用的
+	if (true) {
+		return 0;
+	} else {
+		return -ENOTSUP;
+	}
+}
+
+static int gpio_freqchip_manage_callback(const struct device *port,
+	struct gpio_callback *callback,
+	bool set)
+{
+	printf("%s\n", __func__);
+	// 这里需要判断这个IO是否可用，我现在默认都是可用的
+	if (true) {
+		return 0;
+	} else {
+		return -ENOTSUP;
+	}
+}
+	
+#endif
+
 static DEVICE_API(gpio, gpio_freqchip_api) = {
 	.pin_configure = gpio_freqchip_pin_configure,
 	.port_get_raw = gpio_freqchip_port_get_raw,
@@ -159,6 +194,13 @@ static DEVICE_API(gpio, gpio_freqchip_api) = {
 	.port_set_bits_raw = gpio_freqchip_port_set_bits_raw,
 	.port_clear_bits_raw = gpio_freqchip_port_clear_bits_raw,
 	.port_toggle_bits = gpio_freqchip_port_toggle_bits,
+#ifdef CONFIG_GPIO_FREQCHIP_INTERRUPT
+	.pin_interrupt_configure = gpio_freqchip_pin_interrupt_configure,
+	.manage_callback = gpio_freqchip_manage_callback,
+#endif
+#ifdef CONFIG_GPIO_GET_DIRECTION
+	.port_get_direction = gpio_freqchip_port_get_direction,
+#endif
 };
 
 static int gpio_freqchip_init(const struct device *dev) {

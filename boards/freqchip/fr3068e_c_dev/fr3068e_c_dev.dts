@@ -23,6 +23,9 @@
 	aliases {
 		led0 = &frled0;
 		led1 = &frled1;
+		led2 = &frled2;
+
+		sw0 = &frbutton0;
 	};
 
 	/* 定义 GPIO 引脚 LED */
@@ -44,6 +47,18 @@
 			gpios = <&gpiod 15 GPIO_ACTIVE_LOW>;
 			label = "LED2";
 			status = "disabled";
+		};
+	};
+
+	/* 定义 GPIO 引脚按键 */
+	buttons {
+		compatible = "gpio-keys";
+		status = "okay";
+
+		frbutton0: button_sw0 {
+			gpios = <&gpioc 1 GPIO_ACTIVE_LOW>;
+			label = "test button";
+			status = "okay";
 		};
 	};
 };

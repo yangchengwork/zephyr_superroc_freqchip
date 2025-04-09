@@ -8,6 +8,7 @@
 #include <mem.h>
 #include <arm/armv8-m.dtsi>
 #include <zephyr/dt-bindings/gpio/gpio.h>
+#include <../../soc/freqchip/fr/fr30xx_c/fr30xx_irq.h>
 
 / {
 	cpus {
@@ -91,31 +92,36 @@
 				compatible = "freqchip,freqchip-gpio";
 				gpio-controller;
 				#gpio-cells = <2>;
-				reg = <0x50000000 0x14>;
+				interrupts = <GPIOA_IRQn 2>;
+				reg = <GPIOA_BASE 0x14>;
 			};
 			gpiob: gpio@50008000 {
 				compatible = "freqchip,freqchip-gpio";
 				gpio-controller;
 				#gpio-cells = <2>;
-				reg = <0x50008000 0x14>;
+				interrupts = <GPIOB_IRQn 2>;
+				reg = <GPIOB_BASE 0x14>;
 			};
 			gpioc: gpio@50100000 {
 				compatible = "freqchip,freqchip-gpio";
 				gpio-controller;
 				#gpio-cells = <2>;
-				reg = <0x50100000 0x14>;
+				interrupts = <GPIOC_IRQn 2>;
+				reg = <GPIOC_BASE 0x14>;
 			};
 			gpiod: gpio@50108000 {
 				compatible = "freqchip,freqchip-gpio";
 				gpio-controller;
 				#gpio-cells = <2>;
-				reg = <0x50108000 0x14>;
+				interrupts = <GPIOD_IRQn 2>;
+				reg = <GPIOD_BASE 0x14>;
 			};
 			gpioe: gpio@50200000 {
 				compatible = "freqchip,freqchip-gpio";
 				gpio-controller;
 				#gpio-cells = <2>;
-				reg = <0x50200000 0x14>;
+				interrupts = <GPIOE_IRQn 2>;
+				reg = <GPIOE_BASE 0x14>;
 			};
 		};
 	};

@@ -7,3 +7,12 @@ config GPIO_FREQCHIP
 	depends on DT_HAS_FREQCHIP_FREQCHIP_GPIO_ENABLED
 	help 
 		Enable GPIO driver for Freqchip line of MCUs
+
+config GPIO_FREQCHIP_INTERRUPT
+	bool "Interrupt support"
+	depends on GPIO_FREQCHIP
+	default y
+	help
+	  The option can be used to disable the GPIO interrupt support to
+	  significantly reduce memory footprint in case of application that does
+	  not need GPIO interrupts.
