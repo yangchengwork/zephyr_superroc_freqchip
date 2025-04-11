@@ -123,6 +123,16 @@
 				interrupts = <GPIOE_IRQn 2>;
 				reg = <GPIOE_BASE 0x14>;
 			};
+			pwm0: pwm@50050000 {
+				compatible = "freqchip,freqchip-pwm";
+				#pwm-cells = <3>;
+				reg = <PWM0_BASE 0x180>;
+			};
+			pwm1: pwm@5015000 {
+				compatible = "freqchip,freqchip-pwm";
+				#pwm-cells = <3>;
+				reg = <PWM1_BASE 0x180>;
+			};
 		};
 	};
 };
