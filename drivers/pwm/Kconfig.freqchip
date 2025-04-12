@@ -1,0 +1,7 @@
+# Copyright (c) 2025 Freqchip
+# SPDX-License-Identifier: Apache-2.0
+
+config PWM_FREQCHIP
+	bool "PWM Driver for Freqchip family of MCUs"
+	default y
+	depends on DT_HAS_FREQCHIP_FREQCHIP_PWM_ENABLED
