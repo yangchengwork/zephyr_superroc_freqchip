@@ -59,8 +59,9 @@
 		status = "disabled";
 
 		frpwmled0: led_pwm_d3 {
-			pwms = <&pwm0 6 PWM_MSEC(20) PWM_POLARITY_NORMAL>;
+			pwms = <&pwm1 6 PWM_MSEC(20) PWM_POLARITY_NORMAL>;
 			label = "LED0";
+			// gpios = <&gpiod 6 GPIO_ACTIVE_HIGH>;
 			status = "okay";
 		};
 	};
