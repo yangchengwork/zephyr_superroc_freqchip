@@ -1,0 +1,12 @@
+# dts/bindings/led/freqchip-leds.yaml
+description: freqchip PWM LED with GPIO configuration
+
+compatible: "freqchip,pwm-gpio-led"
+
+include: pwm-leds.yaml  # 继承pwm-leds.yaml的属性
+
+properties:
+  gpios:
+    type: phandle-array
+    description: GPIO pin for LED control
+    required: true
