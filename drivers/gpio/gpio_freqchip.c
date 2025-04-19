@@ -8,6 +8,7 @@
 
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/gpio/gpio_utils.h>
+#include <../../soc/freqchip/fr/fr30xx_c/fr30xx_irq.h>
 
 struct gpio_freqchip_config {
 	/* gpio_driver_config needs to be first */
@@ -21,6 +22,8 @@ struct gpio_freqchip_data {
 	struct gpio_driver_data common;
 	/* output old value 1bit->1pin */
 	uint32_t old_output_value;
+	/* PMU input mask */
+	uint16_t pmu_input_mask;
 };
 
 static int gpio_freqchip_pin_configure(const struct device *port,
@@ -33,35 +36,45 @@ static int gpio_freqchip_pin_configure(const struct device *port,
 
 	printf("%s %s->%p:%d,%x,%x\n", __func__, port->name, gpio, pin, flags, data->old_output_value);
 
-	GPIO_InitTypeDef GPIO_Handle = {0};
-	GPIO_Handle.Pin = 1<<pin;
-	if (flags & GPIO_OUTPUT) {
-		GPIO_Handle.Mode = GPIO_MODE_OUTPUT_PP;
-		if (flags & GPIO_OUTPUT_INIT_LOW) {
-			GPIO_Handle.Pull = GPIO_PULLUP;
-		} else {
-			GPIO_Handle.Pull = GPIO_PULLDOWN;
-		}
-	} else if (flags & GPIO_INPUT) {
-		GPIO_Handle.Mode = GPIO_MODE_INPUT;
-		if (flags & GPIO_OUTPUT_INIT_HIGH) {
-			GPIO_Handle.Pull = GPIO_PULLUP;
-		} else {
-			GPIO_Handle.Pull = GPIO_PULLDOWN;
-		}
-	}
-	gpio_init(gpio, &GPIO_Handle);
+	if (gpio == PMU_BASE) {	// 这是PMU的GPIO
+		if (flags & GPIO_OUTPUT) {	// PMU的GPIO输出
 
-	if (flags & GPIO_OUTPUT) {
-		uint16_t pin_value = 1<<pin;
-		if (flags & GPIO_OUTPUT_INIT_LOW) {
-			data->old_output_value &= ~pin_value;
-			gpio_write_pin(gpio, pin_value, GPIO_PIN_CLEAR);
-		} else if (flags & GPIO_OUTPUT_INIT_HIGH) {
-			data->old_output_value |= pin_value;
-			gpio_write_pin(gpio, pin_value, GPIO_PIN_SET);
+		} else if (flags & GPIO_INPUT) { // PMU的GPIO输入
+			data->pmu_input_mask |= 1<<pin;
+			pmu_set_pin_pull(1<<pin, PMU_GPIO_PULL_UP);
+			pmu_set_pin_dir(1<<pin, PMU_GPIO_MODE_INPUT);
 		}
-		printf("%x,%x\n", pin_value, data->old_output_value);
+	} else {	// 这是GPIO的GPIO
+		GPIO_InitTypeDef GPIO_Handle = {0};
+		GPIO_Handle.Pin = 1<<pin;
+		if (flags & GPIO_OUTPUT) {
+			GPIO_Handle.Mode = GPIO_MODE_OUTPUT_PP;
+			if (flags & GPIO_OUTPUT_INIT_LOW) {
+				GPIO_Handle.Pull = GPIO_PULLUP;
+			} else {
+				GPIO_Handle.Pull = GPIO_PULLDOWN;
+			}
+		} else if (flags & GPIO_INPUT) {
+			GPIO_Handle.Mode = GPIO_MODE_INPUT;
+			if (flags & GPIO_OUTPUT_INIT_HIGH) {
+				GPIO_Handle.Pull = GPIO_PULLUP;
+			} else {
+				GPIO_Handle.Pull = GPIO_PULLDOWN;
+			}
+		}
+		gpio_init(gpio, &GPIO_Handle);
+
+		if (flags & GPIO_OUTPUT) {
+			uint16_t pin_value = 1<<pin;
+			if (flags & GPIO_OUTPUT_INIT_LOW) {
+				data->old_output_value &= ~pin_value;
+				gpio_write_pin(gpio, pin_value, GPIO_PIN_CLEAR);
+			} else if (flags & GPIO_OUTPUT_INIT_HIGH) {
+				data->old_output_value |= pin_value;
+				gpio_write_pin(gpio, pin_value, GPIO_PIN_SET);
+			}
+			printf("%x,%x\n", pin_value, data->old_output_value);
+		}
 	}
 
 	// 这里需要判断这个IO是否可用，我现在默认都是可用的
@@ -77,9 +90,15 @@ static int gpio_freqchip_port_get_raw(const struct device *port,
 {
 	const struct gpio_freqchip_config *cfg = port->config;
 	GPIO_TypeDef *gpio = (GPIO_TypeDef *)cfg->base;
-	// *value = gpio_read_pin(gpio, 0);
-	*value = gpio_read_group(gpio);
-	printf("%s:%x\n", __func__, *value);
+	struct gpio_freqchip_data *data = port->data;
+
+	if (gpio == PMU_BASE) {	// 这是PMU的GPIO
+		*value = pmu_get_gpios_value(data->pmu_input_mask);
+	} else {
+		GPIO_TypeDef *gpio = (GPIO_TypeDef *)cfg->base;
+		*value = gpio_read_group(gpio);
+	}
+	// printf("%s:%x\n", __func__, *value);
 
 	// 这里需要判断这个IO是否可用，我现在默认都是可用的
 	if (true) {
@@ -107,7 +126,7 @@ static int gpio_freqchip_port_set_bits_raw(const struct device *port,
 {
 	struct gpio_freqchip_data *data = port->data;
 	data->old_output_value |= pins;
-	printf("%s:%x,%x\n", __func__, pins, data->old_output_value);
+	// printf("%s:%x,%x\n", __func__, pins, data->old_output_value);
 	const struct gpio_freqchip_config *cfg = port->config;
 	GPIO_TypeDef *gpio = (GPIO_TypeDef *)cfg->base;
 	gpio_write_pin(gpio, pins, GPIO_PIN_SET);
@@ -124,7 +143,7 @@ static int gpio_freqchip_port_clear_bits_raw(const struct device *port,
 {
 	struct gpio_freqchip_data *data = port->data;
 	data->old_output_value &= ~pins;
-	printf("%s:%x,%x\n", __func__, pins, data->old_output_value);
+	// printf("%s:%x,%x\n", __func__, pins, data->old_output_value);
 	const struct gpio_freqchip_config *cfg = port->config;
 	GPIO_TypeDef *gpio = (GPIO_TypeDef *)cfg->base;
 	gpio_write_pin(gpio, pins, GPIO_PIN_CLEAR);

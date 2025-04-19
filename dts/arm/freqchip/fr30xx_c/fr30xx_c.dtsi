@@ -123,6 +123,13 @@
 				interrupts = <GPIOE_IRQn 2>;
 				reg = <GPIOE_BASE 0x14>;
 			};
+			pmu0: pmu@F0000000 {
+				compatible = "freqchip,freqchip-gpio";
+				gpio-controller;
+				#gpio-cells = <2>;
+				interrupts = <PMU_IRQn 2>;
+				reg = <PMU_BASE 0x14>;
+			};
 			pwm0: pwm@50050000 {
 				compatible = "freqchip,freqchip-pwm";
 				#pwm-cells = <3>;

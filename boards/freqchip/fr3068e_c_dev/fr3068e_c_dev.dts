@@ -47,7 +47,7 @@
 			status = "okay";
 		};
 		frled2: led_d5 {
-			gpios = <&gpiod 15 GPIO_ACTIVE_LOW>;
+			gpios = <&pmu0 15 GPIO_ACTIVE_LOW>;
 			label = "LED2";
 			status = "disabled";
 		};
@@ -72,7 +72,17 @@
 		status = "okay";
 
 		frbutton0: button_sw0 {
-			gpios = <&gpioc 1 GPIO_ACTIVE_LOW>;
+			gpios = <&pmu0 4 GPIO_ACTIVE_LOW>;
+			label = "test button";
+			status = "okay";
+		};
+		frbutton1: button_sw1 {
+			gpios = <&pmu0 5 GPIO_ACTIVE_LOW>;
+			label = "test button";
+			status = "okay";
+		};
+		frbutton2: button_sw2 {
+			gpios = <&pmu0 6 GPIO_ACTIVE_LOW>;
 			label = "test button";
 			status = "okay";
 		};

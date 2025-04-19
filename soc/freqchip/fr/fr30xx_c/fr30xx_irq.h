@@ -198,6 +198,8 @@ typedef enum IRQn
 #define TRNG_BASE            (0xE00D0000)
 #define ADC_BASE             (0xE00E0000)
 
+// 这里是借用，真实地址并不对只是借用
+#define PMU_BASE             (0xF0000000)
 
 /**
   * @}
