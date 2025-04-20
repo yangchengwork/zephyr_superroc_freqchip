@@ -8,6 +8,8 @@
 
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/gpio/gpio_utils.h>
+#include <zephyr/irq.h>
+
 #include <../../soc/freqchip/fr/fr30xx_c/fr30xx_irq.h>
 
 struct gpio_freqchip_config {
@@ -24,7 +26,17 @@ struct gpio_freqchip_data {
 	uint32_t old_output_value;
 	/* PMU input mask */
 	uint16_t pmu_input_mask;
+#ifdef CONFIG_GPIO_FREQCHIP_INTERRUPT
+	sys_slist_t callbacks;
+#endif
 };
+
+static inline struct gpio_freqchip_data *get_port_data(const struct device *port)
+{
+	return port->data;
+}
+
+
 
 static int gpio_freqchip_pin_configure(const struct device *port,
 				  gpio_pin_t pin,
@@ -36,7 +48,7 @@ static int gpio_freqchip_pin_configure(const struct device *port,
 
 	printf("%s %s->%p:%d,%x,%x\n", __func__, port->name, gpio, pin, flags, data->old_output_value);
 
-	if (gpio == PMU_BASE) {	// 这是PMU的GPIO
+	if ((uint32_t)gpio == PMU_BASE) {	// 这是PMU的GPIO
 		if (flags & GPIO_OUTPUT) {	// PMU的GPIO输出
 
 		} else if (flags & GPIO_INPUT) { // PMU的GPIO输入
@@ -92,8 +104,9 @@ static int gpio_freqchip_port_get_raw(const struct device *port,
 	GPIO_TypeDef *gpio = (GPIO_TypeDef *)cfg->base;
 	struct gpio_freqchip_data *data = port->data;
 
-	if (gpio == PMU_BASE) {	// 这是PMU的GPIO
-		*value = pmu_get_gpios_value(data->pmu_input_mask);
+	if ((uint32_t)gpio == PMU_BASE) {	// 这是PMU的GPIO
+		// *value = pmu_get_gpios_value(data->pmu_input_mask);
+		*value = 0;
 	} else {
 		GPIO_TypeDef *gpio = (GPIO_TypeDef *)cfg->base;
 		*value = gpio_read_group(gpio);
@@ -177,12 +190,44 @@ static int gpio_freqchip_port_toggle_bits(const struct device *port,
 }
 
 #ifdef CONFIG_GPIO_FREQCHIP_INTERRUPT
+void PMU_GPIO_IRQHandler(const struct device *dev)
+{
+	uint16_t pmu_data = ool_read16(PMU_REG_PIN_DATA);
+	uint16_t result = ool_read16(PMU_REG_PIN_XOR_RESULT);
+	ool_write16(PMU_REG_PIN_LAST_V, pmu_data);
+	ool_write16(PMU_REG_PIN_XOR_CLR, result);
+	printf("%s:%s, %x,%x\n", __func__, dev->name, pmu_data, result);
+	// struct gpio_freqchip_data *data = get_port_data(dev);
+	// sys_slist_t *list = &data->callbacks;
+
+	// gpio_fire_callbacks(list, dev, 1<<4);
+}
+
 static int gpio_freqchip_pin_interrupt_configure(const struct device *port,
 	gpio_pin_t pin,
 	enum gpio_int_mode mode,
 	enum gpio_int_trig trig)
 {
-	printf("%s\n", __func__);
+	const struct gpio_freqchip_config *cfg = port->config;
+	GPIO_TypeDef *gpio = (GPIO_TypeDef *)cfg->base;
+	struct gpio_freqchip_data *data = port->data;
+#if 1
+	if ((uint32_t)gpio == PMU_BASE) {	// 这是PMU的GPIO
+		pmu_gpio_int_init(1<<pin, PMU_GPIO_PULL_UP, 1);
+		pmu_enable_isr(PMU_GPIO_PMU_INT_MSK_BIT);
+		/*
+		NVIC_SetPriority(PMU_IRQn, 4);
+		NVIC_EnableIRQ(PMU_IRQn);
+
+		uint16_t isr = pmu_get_isr_state();
+		printf("%s:%x\n", __func__, isr);
+		*/
+		IRQ_CONNECT(PMU_IRQn, 4, PMU_GPIO_IRQHandler, (const void *)port, 0);
+		irq_enable(PMU_IRQn);
+	}
+#endif
+	printf("%s:%d,%x,%x\n", __func__, pin, mode, trig);
+
 	// 这里需要判断这个IO是否可用，我现在默认都是可用的
 	if (true) {
 		return 0;
@@ -195,7 +240,12 @@ static int gpio_freqchip_manage_callback(const struct device *port,
 	struct gpio_callback *callback,
 	bool set)
 {
-	printf("%s\n", __func__);
+	// const struct gpio_freqchip_config *cfg = port->config;
+	// GPIO_TypeDef *gpio = (GPIO_TypeDef *)cfg->base;
+	// struct gpio_freqchip_data *data = port->data;
+	gpio_manage_callback(&get_port_data(port)->callbacks,
+				     callback, set);
+	printf("%s:%d\n", __func__, set);
 	// 这里需要判断这个IO是否可用，我现在默认都是可用的
 	if (true) {
 		return 0;
