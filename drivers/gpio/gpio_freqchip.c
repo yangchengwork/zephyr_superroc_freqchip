@@ -85,7 +85,7 @@ static int gpio_freqchip_pin_configure(const struct device *port,
 				data->old_output_value |= pin_value;
 				gpio_write_pin(gpio, pin_value, GPIO_PIN_SET);
 			}
-			printf("%x,%x\n", pin_value, data->old_output_value);
+			printf("%s:%x,%x\n", __func__, pin_value, data->old_output_value);
 		}
 	}
 
@@ -105,8 +105,8 @@ static int gpio_freqchip_port_get_raw(const struct device *port,
 	struct gpio_freqchip_data *data = port->data;
 
 	if ((uint32_t)gpio == PMU_BASE) {	// 这是PMU的GPIO
-		// *value = pmu_get_gpios_value(data->pmu_input_mask);
-		*value = 0;
+		*value = pmu_get_gpios_value(data->pmu_input_mask);
+		// *value = 0;
 	} else {
 		GPIO_TypeDef *gpio = (GPIO_TypeDef *)cfg->base;
 		*value = gpio_read_group(gpio);
@@ -139,7 +139,7 @@ static int gpio_freqchip_port_set_bits_raw(const struct device *port,
 {
 	struct gpio_freqchip_data *data = port->data;
 	data->old_output_value |= pins;
-	// printf("%s:%x,%x\n", __func__, pins, data->old_output_value);
+	printf("%s:%x,%x\n", __func__, pins, data->old_output_value);
 	const struct gpio_freqchip_config *cfg = port->config;
 	GPIO_TypeDef *gpio = (GPIO_TypeDef *)cfg->base;
 	gpio_write_pin(gpio, pins, GPIO_PIN_SET);
@@ -197,11 +197,15 @@ void PMU_GPIO_IRQHandler(const struct device *dev)
 	ool_write16(PMU_REG_PIN_LAST_V, pmu_data);
 	ool_write16(PMU_REG_PIN_XOR_CLR, result);
 	printf("%s:%s, %x,%x\n", __func__, dev->name, pmu_data, result);
-	// struct gpio_freqchip_data *data = get_port_data(dev);
-	// sys_slist_t *list = &data->callbacks;
+	struct gpio_freqchip_data *data = get_port_data(dev);
+	sys_slist_t *list = &data->callbacks;
 
-	// gpio_fire_callbacks(list, dev, 1<<4);
+	gpio_fire_callbacks(list, dev, 1<<4);
 }
+
+#define FREQCHIP_GPIO_IRQ(id)                                                               \
+	IRQ_CONNECT(DT_INST_IRQN(id), DT_INST_IRQ(id, priority), PMU_GPIO_IRQHandler,                 \
+		    DEVICE_DT_INST_GET(id), 0U);								
 
 static int gpio_freqchip_pin_interrupt_configure(const struct device *port,
 	gpio_pin_t pin,
@@ -210,8 +214,8 @@ static int gpio_freqchip_pin_interrupt_configure(const struct device *port,
 {
 	const struct gpio_freqchip_config *cfg = port->config;
 	GPIO_TypeDef *gpio = (GPIO_TypeDef *)cfg->base;
-	struct gpio_freqchip_data *data = port->data;
-#if 1
+	// struct gpio_freqchip_data *data = port->data;
+
 	if ((uint32_t)gpio == PMU_BASE) {	// 这是PMU的GPIO
 		pmu_gpio_int_init(1<<pin, PMU_GPIO_PULL_UP, 1);
 		pmu_enable_isr(PMU_GPIO_PMU_INT_MSK_BIT);
@@ -219,13 +223,13 @@ static int gpio_freqchip_pin_interrupt_configure(const struct device *port,
 		NVIC_SetPriority(PMU_IRQn, 4);
 		NVIC_EnableIRQ(PMU_IRQn);
 
+		*/
 		uint16_t isr = pmu_get_isr_state();
 		printf("%s:%x\n", __func__, isr);
-		*/
-		IRQ_CONNECT(PMU_IRQn, 4, PMU_GPIO_IRQHandler, (const void *)port, 0);
+	// IRQ_CONNECT(PMU_IRQn, 4, PMU_GPIO_IRQHandler, gpio_irq, 0);
 		irq_enable(PMU_IRQn);
 	}
-#endif
+
 	printf("%s:%d,%x,%x\n", __func__, pin, mode, trig);
 
 	// 这里需要判断这个IO是否可用，我现在默认都是可用的
@@ -272,12 +276,23 @@ static DEVICE_API(gpio, gpio_freqchip_api) = {
 #endif
 };
 
-static int gpio_freqchip_init(const struct device *dev) {
-    printf("FreqChip GPIO %s Initialized\n", dev->name);
-    return 0;
-}
+// static int gpio_freqchip_init(const struct device *dev) {
+//     printf("FreqChip GPIO %s Initialized\n", dev->name);
+//     return 0;
+// }
 
 #define GPIO_FREQCHIP_INIT(n)						\
+	static int gpio_freqchip_init_##n(const struct device *dev)                                \
+	{                                                                                          \
+		if (!(DT_INST_IRQ_HAS_CELL(n, irq))) {                                            \
+			return 0;                                                                  \
+		}                                                                                  \
+																								\
+		FREQCHIP_GPIO_IRQ(n);			\
+																								\
+		return 0;                                                                          \
+	}                                                                                          \
+									\
 	static const struct gpio_freqchip_config gpio_freqchip_config_##n = {	\
 		.common = {						\
 			.port_pin_mask = GPIO_PORT_PIN_MASK_FROM_DT_INST(n), \
@@ -287,7 +302,7 @@ static int gpio_freqchip_init(const struct device *dev) {
 									\
 	static struct gpio_freqchip_data gpio_freqchip_data_##n;			\
 									\
-	DEVICE_DT_INST_DEFINE(n, gpio_freqchip_init, NULL, &gpio_freqchip_data_##n,	\
+	DEVICE_DT_INST_DEFINE(n,  gpio_freqchip_init_##n, NULL, &gpio_freqchip_data_##n,	\
 			      &gpio_freqchip_config_##n, POST_KERNEL,	\
 			      CONFIG_GPIO_INIT_PRIORITY,		\
 			      &gpio_freqchip_api);
