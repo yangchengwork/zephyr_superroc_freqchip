@@ -139,7 +139,7 @@ static int gpio_freqchip_port_set_bits_raw(const struct device *port,
 {
 	struct gpio_freqchip_data *data = port->data;
 	data->old_output_value |= pins;
-	printf("%s:%x,%x\n", __func__, pins, data->old_output_value);
+	// printf("%s:%x,%x\n", __func__, pins, data->old_output_value);
 	const struct gpio_freqchip_config *cfg = port->config;
 	GPIO_TypeDef *gpio = (GPIO_TypeDef *)cfg->base;
 	gpio_write_pin(gpio, pins, GPIO_PIN_SET);
@@ -190,17 +190,37 @@ static int gpio_freqchip_port_toggle_bits(const struct device *port,
 }
 
 #ifdef CONFIG_GPIO_FREQCHIP_INTERRUPT
+
+static void pmu_dump_reg(void)
+{
+	uint8_t reg = PMU_REG_PIN_INPUT_EN;
+	uint16_t reg_data;
+	printf("%s ", __func__);
+	for (reg = PMU_REG_PIN_INPUT_EN; reg <= PMU_REG_PIN_LAST_V; reg+=2) {
+		reg_data = ool_read16(reg);
+		printf("%x:%x,", reg, reg_data);
+
+	}
+	printf("\n");
+}
+
 void PMU_GPIO_IRQHandler(const struct device *dev)
 {
+    uint16_t state_map = pmu_get_isr_state();
 	uint16_t pmu_data = ool_read16(PMU_REG_PIN_DATA);
 	uint16_t result = ool_read16(PMU_REG_PIN_XOR_RESULT);
 	ool_write16(PMU_REG_PIN_LAST_V, pmu_data);
 	ool_write16(PMU_REG_PIN_XOR_CLR, result);
-	printf("%s:%s, %x,%x\n", __func__, dev->name, pmu_data, result);
-	struct gpio_freqchip_data *data = get_port_data(dev);
-	sys_slist_t *list = &data->callbacks;
-
-	gpio_fire_callbacks(list, dev, 1<<4);
+	if (state_map & PMU_GPIO_PMU_INT_MSK_BIT) {
+		// test dump pmu寄存器
+		// pmu_dump_reg();
+		// printf("%s:%s, %x,%x\n", __func__, dev->name, pmu_data, result);
+		struct gpio_freqchip_data *data = get_port_data(dev);
+		sys_slist_t *list = &data->callbacks;
+	
+		gpio_fire_callbacks(list, dev, 1<<4);
+	}
+    pmu_clear_isr_state(state_map);
 }
 
 #define FREQCHIP_GPIO_IRQ(id)                                                               \
@@ -216,18 +236,19 @@ static int gpio_freqchip_pin_interrupt_configure(const struct device *port,
 	GPIO_TypeDef *gpio = (GPIO_TypeDef *)cfg->base;
 	// struct gpio_freqchip_data *data = port->data;
 
-	if ((uint32_t)gpio == PMU_BASE) {	// 这是PMU的GPIO
-		pmu_gpio_int_init(1<<pin, PMU_GPIO_PULL_UP, 1);
-		pmu_enable_isr(PMU_GPIO_PMU_INT_MSK_BIT);
-		/*
-		NVIC_SetPriority(PMU_IRQn, 4);
-		NVIC_EnableIRQ(PMU_IRQn);
+	if (GPIO_INT_MODE_EDGE == (mode & GPIO_INT_MODE_EDGE)) {
+		if ((uint32_t)gpio == PMU_BASE) {	// 这是PMU的GPIO
+			if (GPIO_INT_TRIG_HIGH == (trig & GPIO_INT_TRIG_HIGH)) {
+				// printf("PMU GPIO %d pull down\n", pin);
+				pmu_gpio_int_init(1<<pin, PMU_GPIO_PULL_DOWN, 1);
+			} else {
+				// printf("PMU GPIO %d pull up\n", pin);
+				pmu_gpio_int_init(1<<pin, PMU_GPIO_PULL_UP, 1);
+			}
+			pmu_enable_isr(PMU_GPIO_PMU_INT_MSK_BIT);
 
-		*/
-		uint16_t isr = pmu_get_isr_state();
-		printf("%s:%x\n", __func__, isr);
-	// IRQ_CONNECT(PMU_IRQn, 4, PMU_GPIO_IRQHandler, gpio_irq, 0);
-		irq_enable(PMU_IRQn);
+			irq_enable(PMU_IRQn);
+		}
 	}
 
 	printf("%s:%d,%x,%x\n", __func__, pin, mode, trig);
